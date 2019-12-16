@@ -12,55 +12,55 @@ tmpFile="lion.txt"
 # Gera a variável packageClass com o nome do pacote
 # e da classe no seguinte formato:
 # packageClass=package.class
-# Salva no Hold buffer a linha que contém o package.
-# Anexa no Pattern buffer a linha do package com a linha
-# que contém class.
-# Formata a saída, removendo no fim o CR.
+
 packageClass=$(
-sed -rn '
-  /package/h
-  / class /G
-  s/\s\n\s*/ /
-  s/.* class (\w+) .* package (.*);/\2.\1/p 
-  /class/q
-' $fileName  
+  sed -rn '
+    s/\/\/.*//g
+    /package/,/class/ {
+      /package/ {
+        s/package (.*);.*/\1/
+        h
+      }
+      /(public|private) class/ {
+        s/.* class (\w+) .*/\1/
+        G
+        s/(.*)\n(.*)/\2.\1/p
+      }
+    }
+  ' $fileName  
 )
 echo -e "package.class: $packageClass\n"
 
-# Instrução SED para gerar a saída na seguinte forma:
-# package.class.atribute=description.
-# Inicialmente, remove da edição os atributos:
-# dataAlteracaoAuditoria;
-# usuarioAuditoria;
-# id.
-# Salva no Hold buffer a linha que contém @DisplayName.
-# Altera a linha que contém o método get, passando a 
-# primeira letra do atributo para minúsculo.
-# Anexa a linha que está no Hold buffer (@DisplayName) com
-# a linha que contém o método get.
-# Substitui a quebra de linha por espaço.
-# Cria a saída formatada.
 sed -rn '
+  s/\/\/.*//g
   /getDataAlteracaoAuditoria/d  
   /getUsuarioAuditoria/d
   /getId/d
-  /@DisplayName/h
-  s/get./\L&\E/
-  /get/G
-  /@DisplayName/!b noDisplayName
-  s/\s\n\s*/ /
-  s/.*get(.*)\(\) .*"(.*)".*/'"$packageClass"'.\1=\2/w '"$tmpFile"'
-  s/.*is(.*)\(\) .*"(.*)".*/'"$packageClass"'.\1=\2/w '"$tmpFile"'
-  x
+  /@DisplayName/ {
+    s/.*"(.*)".*/\1/
+    h
+  }
+  1,/public class/ {
+    /class/ {
+      G
+      s/.*\n(.*)/'"$packageClass"'=\1/w '"$tmpFile"'
+      b cleanHoldBuffer
+    }
+  }
+  /(public|private) .* (is|get)\w/ {
+    G
+    s/(is|get)./\L&\E/
+    s/.* (is|get)(\w+)\(.*\n(.*)/'"$packageClass"'.\2=\3/w '"$tmpFile"'
+    b cleanHoldBuffer
+  }
   b
-  :noDisplayName
-  s/\s*public .* get(.*)\(.*/'"$packageClass"'.\1=/i w '"$tmpFile"'
-  s/\s*public .* is(.*)\(.*/'"$packageClass"'.\1=/i w '"$tmpFile"'
+:cleanHoldBuffer
+  s/.*//
+  x
 ' $fileName
 
 insere_arquivoFinal() {
-echo "$packageClass=" >> $propertiesPath/$propertiesFile
-cat $tmpFile >> $propertiesPath/$propertiesFile
+  cat $tmpFile >> $propertiesPath/$propertiesFile
 }
 
 while true; do
@@ -75,10 +75,13 @@ done
 edita_fonte() {
   NomeClasse=$(
     sed -rn '
-      s/public class (\w+) .*/\1/p
-      /class/q
-  ' $fileName)
-  
+      s/\/\/.*//g
+      /package/,/class/ {
+        s/(public|private) class (\w+) .*/\2/p
+      }
+    ' $fileName
+  )
+
   sed -ri '
     /@DisplayName/d
     /equals\(Object arg0\)/,/return this.*/c\
@@ -89,7 +92,6 @@ edita_fonte() {
               return id != null ? this.id.hashCode() : super.hashCode();
     }
   ' $fileName
-  
 } 
 
 while true; do
