@@ -6,7 +6,7 @@ echo "Nome do arquivo=$fileName"
 iconv -f iso-8859-1 -t utf8 $1 > $fileName
 
 propertiesPath="/home/leandro/Sliic/git/sliic-erp/Sliic_ERP/Sliic_ERP_Beans/resources/i18n"
-propertiesFile="messages-beans-configuracao.properties"
+propertiesFile="messages-beans-expedicao.properties"
 tmpFile="lion.txt"
 
 # Gera a variável packageClass com o nome do pacote
@@ -33,9 +33,9 @@ echo -e "package.class: $packageClass\n"
 
 sed -rn '
   s/\/\/.*//g
-  /getDataAlteracaoAuditoria/d  
-  /getUsuarioAuditoria/d
-  /getId/d
+  /(public|private) .* getDataAlteracaoAuditoria/d  
+  /(public|private) .* getUsuarioAuditoria/d
+  /(public|private) .* getId\b/d
   /@DisplayName/ {
     s/.*"(.*)".*/\1/
     h
@@ -49,7 +49,7 @@ sed -rn '
   }
   /(public|private) .* (is|get)\w/ {
     G
-    s/(is|get)./\L&\E/
+    s/ (is|get)./\L&\E/
     s/.* (is|get)(\w+)\(.*\n(.*)/'"$packageClass"'.\2=\3/w '"$tmpFile"'
     b cleanHoldBuffer
   }
@@ -84,7 +84,7 @@ edita_fonte() {
 
   sed -ri '
     /@DisplayName/d
-    /equals\(Object arg0\)/,/return this.*/c\
+    /equals\(Object \w+\)/,/return (this.*|SliicUtil)/c\
       public boolean equals(Object outro) {\
               return SliicUtil.objects.equals(this, ('"$NomeClasse"') outro, (e) -> e.getId());
     /int hashCode/,/return (this|id)/{
