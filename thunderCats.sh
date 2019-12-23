@@ -6,7 +6,7 @@ echo "Nome do arquivo=$fileName"
 iconv -f iso-8859-1 -t utf8 $1 > $fileName
 
 propertiesPath="/home/leandro/Sliic/git/sliic-erp/Sliic_ERP/Sliic_ERP_Beans/resources/i18n"
-propertiesFile="messages-beans-expedicao.properties"
+propertiesFile="messages-beans-cadastro.properties"
 tmpFile="lion.txt"
 
 # Gera a variável packageClass com o nome do pacote
@@ -21,7 +21,7 @@ packageClass=$(
         s/package (.*);.*/\1/
         h
       }
-      /(public|private) class/ {
+      /(public|private)(\s|\s\w+\s)class/ {
         s/.* class (\w+) .*/\1/
         G
         s/(.*)\n(.*)/\2.\1/p
@@ -40,7 +40,7 @@ sed -rn '
     s/.*"(.*)".*/\1/
     h
   }
-  1,/public class/ {
+  1,/(public|private)(\s|\s\w+\s)class/ {
     /class/ {
       G
       s/.*\n(.*)/'"$packageClass"'=\1/w '"$tmpFile"'
@@ -77,7 +77,7 @@ edita_fonte() {
     sed -rn '
       s/\/\/.*//g
       /package/,/class/ {
-        s/(public|private) class (\w+) .*/\2/p
+        s/(public|private)(\s|\s\w+\s)class (\w+) .*/\3/p
       }
     ' $fileName
   )
