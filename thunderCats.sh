@@ -84,10 +84,17 @@ edita_fonte() {
 
   sed -ri '
     /@DisplayName/d
-    /equals\(Object \w+\)/,/return (this.*|SliicUtil)/c\
-      public boolean equals(Object outro) {\
-              return SliicUtil.objects.equals(this, ('"$NomeClasse"') outro, (e) -> e.getId());
-    /int hashCode/,/return (this|id)/{
+    /equals\(Object \w+\)/,/^$/ {
+      H
+      /^$/ {
+        x
+        /this.getId/!p
+        /this.getId/c\
+          public boolean equals(Object outro) {\
+            return SliicUtil.objects.equals(this, ('"$NomeClasse"') outro, (e) -> e.getId());
+          }
+      }
+    /int hashCode/,/return (this|id)/ {
       /if/,/return this/c\
               return id != null ? this.id.hashCode() : super.hashCode();
     }
