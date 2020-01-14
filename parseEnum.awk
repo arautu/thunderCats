@@ -31,7 +31,7 @@ function getConstEnum(enumConst,  splitConst, splitDesc) {
   }
 
   for (i in enumConst) {
-    gsub(/(\t*|\s*|")/,"",enumConst[i])
+    gsub(/(\t*|^\s*|")/,"",enumConst[i])
   }
 }
 # Retorna o nome do atributo obtido do método get ou is.
@@ -118,15 +118,8 @@ NR==1,/^package/ {
 }
 
 END {
-  # Imprime os métodos get.
-  for (i in methods) {
-    print "public MessageSourceResolvable " methods[i]"() {"
-    printf "\tString code = this.getClass().getName() + \".\" + this.name() + \".%s\";\n", 
-      attributes[i]
-    print "\treturn new NextMessageSourceResolvable(code);"
-    print "}"
-  }
   
+  print "Vocabulário\n"
   # Imprime o vocabulário da enumeração.
   if (displayNames[1][1] == enumeration) {
     descricao=displayNames[1][2]
@@ -137,23 +130,34 @@ END {
   print package"."enumeration"="descricao
 
   # Imprime o vocabulário dos atributos.
-  for (i in attributes) {
-    descricao = ""
-    
-    for (j=1; j <= ndisplay; j++) {
-
-      if (attributes[i] == displayNames[j][1]) {
-        descricao = displayNames[j][2]
-        break
-      }
-    }
-    print package"."enumeration"."attributes[i]"="descricao
-  }
+#  for (i in attributes) {
+#    descricao = ""
+#    
+#    for (j=1; j <= ndisplay; j++) {
+#
+#      if (attributes[i] == displayNames[j][1]) {
+#        descricao = displayNames[j][2]
+#        break
+#      }
+#    }
+#    print package"."enumeration"."attributes[i]"="descricao
+#  }
   
   # Imprime o vocabulário das contantes do enum. 
   for (j=1; j <= nconstants; j++) {
     for (i in attributes) {
       print package"."enumeration"."descriptions[j][1]"."attributes[i]"="descriptions[j][i+1]
     }
+  }
+  
+  print "\nMétodos da enumeração\n"
+
+  # Imprime os métodos get.
+  for (i in methods) {
+    print "public MessageSourceResolvable " methods[i]"() {"
+    printf "\tString code = this.getClass().getName() + \".\" + this.name() + \".%s\";\n", 
+      attributes[i]
+    print "\treturn new NextMessageSourceResolvable(code);"
+    print "}"
   }
 }
