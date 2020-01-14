@@ -6,17 +6,17 @@ echo "Nome do arquivo=$fileName"
 iconv -f iso-8859-1 -t utf8 $1 > $fileName
 
 propertiesPath="/home/leandro/Sliic/git/sliic-erp/Sliic_ERP/Sliic_ERP_Beans/resources/i18n"
-propertiesFile="messages-beans-cadastro.properties"
+propertiesFile="messages-beans-rastreamento.properties"
 tmpFile="lion.txt"
 
-# Gera a variável packageClass com o nome do pacote
+# Gera a variável pkgClassOrEnum com o nome do pacote
 # e da classe no seguinte formato:
-# packageClass=package.class
+# pkgClassOrEnum=package.class
 
-packageClass=$(
+pkgClassOrEnum=$(
   sed -rn '
     s/\/\/.*//g
-    /package/,/class/ {
+    1,/(\bclass\b|\benum\b)/ {
       /package/ {
         s/package (.*);.*/\1/
         h
@@ -26,10 +26,14 @@ packageClass=$(
         G
         s/(.*)\n(.*)/\2.\1/p
       }
+      /\benum\b/ {
+        G
+        s/(private|public) enum (\w+).*\n(.*)/\3.\2/p
+      }
     }
   ' $fileName  
 )
-echo -e "package.class: $packageClass\n"
+echo -e "package.class: $pkgClassOrEnum\n"
 
 sed -rn '
   s/\/\/.*//g
@@ -40,17 +44,17 @@ sed -rn '
     s/.*"(.*)".*/\1/
     h
   }
-  1,/(public|private)(\s|\s\w+\s)class/ {
-    /class/ {
+  1,/(\bclass\b|\benum\b)/ {
+    /(\bclass\b|\benum\b)/ {
       G
-      s/.*\n(.*)/'"$packageClass"'=\1/w '"$tmpFile"'
+      s/.*\n(.*)/'"$pkgClassOrEnum"'=\1/w '"$tmpFile"'
       b cleanHoldBuffer
     }
   }
   /(public|private) .* (is|get)\w/ {
     G
     s/ (is|get)./\L&\E/
-    s/.* (is|get)(\w+)\(.*\n(.*)/'"$packageClass"'.\2=\3/w '"$tmpFile"'
+    s/.* (is|get)(\w+)\(.*\n(.*)/'"$pkgClassOrEnum"'.\2=\3/w '"$tmpFile"'
     b cleanHoldBuffer
   }
   b
@@ -76,7 +80,7 @@ edita_fonte() {
   NomeClasse=$(
     sed -rn '
       s/\/\/.*//g
-      /package/,/class/ {
+      /package/,/\bclass\b/ {
         s/(public|private)(\s|\s\w+\s)class (\w+) .*/\3/p
       }
     ' $fileName
