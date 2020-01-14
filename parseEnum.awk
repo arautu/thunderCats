@@ -77,6 +77,7 @@ BEGIN {
   nconstants = 0
   nmethods = 0
   ndisplay = 0
+  print "\n== enum de FILENAME ==\n"
 }
 
 # Obtém o nome do pacote.
@@ -95,6 +96,7 @@ NR==1,/^package/ {
 # Obtém o nome da enumerção.
 /(public|private) enum / {
   enumeration = nameOfEnum()
+  print $0"\n"
 }
 
 # Ordena em array as contantes e suas respectivas descrições.
@@ -104,6 +106,15 @@ NR==1,/^package/ {
   for (i in description) {
     descriptions[nconstants][i] = description[i]
   }
+  # Imprime as contantes
+  gsub("\r","",$0)
+  if (/,$/) {
+    separador = ","
+  }
+  else {
+    separador = ";\n"
+  }
+  print descriptions[nconstants][1] separador
 }
 
 # Obtém os atributos
@@ -111,15 +122,28 @@ NR==1,/^package/ {
   attributes[++nattributes] = getAttribute()
 }
 
+# Imprime o método getNome()
+/getNome/,/}/ {
+  print $0
+}
+
 /public .* (is|get)/ {
   if (! /getNome/) {
     methods[++nmethods] = getMethod()
+  
+    print "\npublic MessageSourceResolvable " methods[nmethods]"() {"
+    printf "\tString code = this.getClass().getName() + \".\" + this.name() + \".%s\";\n", 
+      attributes[nmethods]
+    print "\treturn new NextMessageSourceResolvable(code);"
+    print "}"
   }
 }
 
+
+# --- END ---
 END {
   
-  print "Vocabulário\n"
+  print "\n== Vocabulário ==\n"
   # Imprime o vocabulário da enumeração.
   if (displayNames[1][1] == enumeration) {
     descricao=displayNames[1][2]
@@ -129,35 +153,24 @@ END {
   }
   print package"."enumeration"="descricao
 
-  # Imprime o vocabulário dos atributos.
-#  for (i in attributes) {
-#    descricao = ""
-#    
-#    for (j=1; j <= ndisplay; j++) {
-#
-#      if (attributes[i] == displayNames[j][1]) {
-#        descricao = displayNames[j][2]
-#        break
-#      }
-#    }
-#    print package"."enumeration"."attributes[i]"="descricao
-#  }
+# Imprime o vocabulário dos atributos.
+  for (i in attributes) {
+    descricao = ""
+
+    for (j=1; j <= ndisplay; j++) {
+
+      if (attributes[i] == displayNames[j][1]) {
+        descricao = displayNames[j][2]
+          break
+      }
+    }
+    print package"."enumeration"."attributes[i]"="descricao
+  }
   
   # Imprime o vocabulário das contantes do enum. 
   for (j=1; j <= nconstants; j++) {
     for (i in attributes) {
       print package"."enumeration"."descriptions[j][1]"."attributes[i]"="descriptions[j][i+1]
     }
-  }
-  
-  print "\nMétodos da enumeração\n"
-
-  # Imprime os métodos get.
-  for (i in methods) {
-    print "public MessageSourceResolvable " methods[i]"() {"
-    printf "\tString code = this.getClass().getName() + \".\" + this.name() + \".%s\";\n", 
-      attributes[i]
-    print "\treturn new NextMessageSourceResolvable(code);"
-    print "}"
   }
 }
