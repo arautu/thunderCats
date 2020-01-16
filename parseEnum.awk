@@ -167,7 +167,7 @@ NR==1,/^package/ {
 END {
   print "}" 
   print "\n== Vocabulário ==\n"
-  # Imprime o vocabulário da enumeração.
+  # Imprime o código da enumeração.
   if (displayNames[1][1] == enumeration) {
     descricao=displayNames[1][2]
   }
@@ -176,7 +176,14 @@ END {
   }
   print package"."enumeration"="descricao
 
-# Imprime o vocabulário dos atributos.
+  # Imprime o código para getNome
+  for (i in methods) {
+    if (methods[i] == "getNome") {
+      print package"."enumeration".nome="
+    }
+  }
+
+  # Imprime o código dos atributos.
   for (i in attributes) {
     descricao = ""
 
@@ -189,8 +196,9 @@ END {
     }
     print package"."enumeration"."attributes[i]"="descricao
   }
+
   
-  # Imprime o vocabulário das contantes do enum. 
+  # Imprime os códigos das contantes do enum. 
   for (j=1; j <= nconstants; j++) {
     for (i in attributes) {
       print package"."enumeration"."descriptions[j][1]"."attributes[i]"="descriptions[j][i+1]
