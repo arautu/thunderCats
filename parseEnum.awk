@@ -1,19 +1,19 @@
 #!/bin/awk -f 
 
 # Retorna o nome do package
-function nameOfPkg() {
+function nameOfPkg(package) {
   /^package/ 
-    gsub(";.*", "",$2) 
-    return $2
+    gsub(";.*", "",package) 
+    return package
 }
 
 # Retorna o nome do enum.
-function nameOfEnum(   i) {
-  for (i = 1; i <= NF; ++i) {
-    if ($i == "enum") {
-      gsub("{", "", $(i+1))
-      return $(i+1)
-      break
+function nameOfEnum(enumName,  i, array) {
+  split(enumName, array, /\s/)
+  for (i in array) {
+    if (array[i] == "enum") {
+      sub("{", "", array[i+1])
+      return array[i+1]
     }
   }
 }
@@ -34,23 +34,29 @@ function getConstEnum(enumConst,  splitConst, splitDesc) {
     gsub(/(\t*|^\s*|")/,"",enumConst[i])
   }
 }
+
 # Retorna o nome do atributo obtido do método get ou is.
-function getAttributeByMethod(  method) {
-  method = $3
+function getAttributeByMethod(method) {
   gsub(/(is|get|\(|\))/,"",method)
   return tolower(method)
 }
 
 # Retorna o nome do atributo.
-function getAttribute() {
-  sub(/(\t|;.*)/,"",$NF) 
-  return $NF
+function getAttribute(attr) {
+  split(attr,array,/\s/)
+  for (i in array) {
+    if (match(array[i], /;$/)) {
+      sub(";", "", array[i])
+      return array[i]
+    }
+  }
 }
 
 # Retorna o nome do método
 function getMethod() {
-  gsub(/\(.+/, "", $3)
-  return $3
+  method = $3
+  gsub(/\(.+/, "", method)
+  return method
 }
 
 # Obtém o valor de DisplayName
@@ -61,10 +67,11 @@ function getDisplayName(displayname,     ndisplayname) {
   getline
 
   if (/(public|private) enum /) {
-    displayname[1] = nameOfEnum()
+    displayname[1] = nameOfEnum($0)
   }
   if (/public .* (is|get)/) {
-    displayname[1] = getAttributeByMethod()
+    method = $3
+    displayname[1] = getAttributeByMethod(method)
   }
 
   return ndisplayname
@@ -82,7 +89,7 @@ BEGIN {
 
 # Obtém o nome do pacote.
 NR==1,/^package/ {
-  package = nameOfPkg()
+  package = nameOfPkg($2)
 }
 
 /@DisplayName/ {
@@ -95,7 +102,7 @@ NR==1,/^package/ {
 
 # Obtém o nome da enumerção.
 /(public|private) enum / {
-  enumeration = nameOfEnum()
+  enumeration = nameOfEnum($0)
   print $0"\n"
 }
 
@@ -119,7 +126,7 @@ NR==1,/^package/ {
 
 # Obtém os atributos
 /private .*;/ {
-  attributes[++nattributes] = getAttribute()
+  attributes[++nattributes] = getAttribute($0)
 }
 
 # Imprime o método getNome()
@@ -127,22 +134,38 @@ NR==1,/^package/ {
   print $0
 }
 
+# Guarda em methods[] o nome do método (ex. methods[i] = getDescricao).
+# O valor de nmethods é o tamanho de methods[].
+# Reescreve os métodos getters levando em consideração o dicionário.
+# O método getNome() é mantido inalterado.
 /public .* (is|get)/ {
+  methods[++nmethods] = getMethod()
   if (! /getNome/) {
-    methods[++nmethods] = getMethod()
-  
+    IGNORECASE = 1
+    attr = null
+    for (i in attributes) {
+      if (match(methods[nmethods], attributes[i])) {
+        attr = attributes[i]
+        break
+      }
+
+    }
+    IGNORECASE = 0
+    if (attr == null) {
+        printf "Erro: Não encontrado atributo correspondente ao método %s.\n", methods[nmethods]
+        exit
+    }
     print "\npublic MessageSourceResolvable " methods[nmethods]"() {"
     printf "\tString code = this.getClass().getName() + \".\" + this.name() + \".%s\";\n", 
-      attributes[nmethods]
+      attr
     print "\treturn new NextMessageSourceResolvable(code);"
     print "}"
   }
 }
 
-
 # --- END ---
 END {
-  
+  print "}" 
   print "\n== Vocabulário ==\n"
   # Imprime o vocabulário da enumeração.
   if (displayNames[1][1] == enumeration) {
