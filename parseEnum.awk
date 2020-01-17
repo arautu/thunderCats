@@ -88,7 +88,7 @@ BEGIN {
 }
 
 # Obtém o nome do pacote.
-NR==1,/^package/ {
+NR==1,/^\<package\>/ {
   package = nameOfPkg($2)
 }
 
@@ -101,7 +101,7 @@ NR==1,/^package/ {
 }
 
 # Obtém o nome da enumerção.
-/(public|private) enum / {
+/(public|private) \<enum\> / {
   enumeration = nameOfEnum($0)
   print $0"\n"
 }
@@ -130,7 +130,7 @@ NR==1,/^package/ {
 }
 
 # Imprime o método getNome()
-/getNome/,/}/ {
+/\<getNome\>/,/}/ {
   print $0
 }
 
@@ -140,7 +140,7 @@ NR==1,/^package/ {
 # O método getNome() é mantido inalterado.
 /public .* (is|get)/ {
   methods[++nmethods] = getMethod()
-  if (! /getNome/) {
+  if (! /\<getNome\>/) {
     IGNORECASE = 1
     attr = null
     for (i in attributes) {
