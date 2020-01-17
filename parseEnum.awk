@@ -130,7 +130,7 @@ NR==1,/^\<package\>/ {
 }
 
 # Imprime o método getNome()
-/\<getNome\>/,/}/ {
+/public .* \<getNome\>/,/}/ {
   print $0
 }
 
