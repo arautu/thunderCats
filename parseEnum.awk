@@ -1,5 +1,11 @@
 #!/bin/awk -f 
 
+function removeComments(line) {
+  gsub(/\/.*/, "", line)
+  gsub(/\s$/, "", line)
+  return line
+}
+
 # Retorna o nome do package
 function nameOfPkg(package) {
   /^package/ 
@@ -33,7 +39,6 @@ function getConstEnum(line, enumConst,  array, i) {
   i = 1
   token = match(line, /(,|;)/)
   while (token) {
-    sub(/^\s+/, "", line)
     if (match(line, /"/) == 1) {
       split(line, array, "\"")
       enumConst[++i] = array[2]
@@ -44,9 +49,9 @@ function getConstEnum(line, enumConst,  array, i) {
       token = match(line, ",")
     }
     else {
-      enumConst[++i] = substr(line, 1, token)
+      enumConst[++i] = substr(line, 1, token - 1)
     }
-    gsub(/(\s^|\),|\);)+/,"",enumConst[i])    
+    gsub(/(^\s+|\))+/,"",enumConst[i])    
     line = substr(line, token + 1)
     token = match(line, /(,|;)/)
   }
@@ -124,7 +129,8 @@ NR==1,/^\<package\>/ {
 }
 
 # Ordena em array as contantes e suas respectivas descrições.
-/^\t[A-Z]+[^a-z]/ {
+/^(\t|\s+)[A-Z]+[^a-z]/ {
+  $0 = removeComments($0)
   getConstEnum($0, description)
   nconstants++
   for (i in description) {
