@@ -1,5 +1,8 @@
 #!/bin/awk -f 
 
+# Remove comentários e espaços no fim da instrução
+# Entrada: String text;  // Texto qualquer
+# Saída: String text;
 function removeComments(line) {
   gsub(/\/.*/, "", line)
   gsub(/\s$/, "", line)
@@ -13,7 +16,10 @@ function nameOfPkg(package) {
     return package
 }
 
-# Retorna o nome do enum.
+# Obtém o nome do enum. 
+# Uso: enumName = nameOfEnum($0)
+# Entrada: public enum AcaoRegraImportacaoOrdemEmbarqueEnum {
+# Saída: AcaoRegraImportacaoOrdemEmbarqueEnum
 function nameOfEnum(enumName,  i, array) {
   split(enumName, array, /\s/)
   for (i in array) {
@@ -63,15 +69,13 @@ function getAttributeByMethod(method) {
   return tolower(method)
 }
 
-# Retorna o nome do atributo.
-function getAttribute(attr) {
-  split(attr,array,/\s/)
-  for (i in array) {
-    if (match(array[i], /;$/)) {
-      sub(";", "", array[i])
-      return array[i]
-    }
-  }
+# Obtém o nome do atributo e seu tipo
+# Uso: getAttribute($0, array)
+# Entrada: private final int nivel;
+# Saída: nivel; int
+function getAttribute() {
+  sub(";", "", $NF)
+  return $NF
 }
 
 # Retorna o nome do método
@@ -149,7 +153,8 @@ NR==1,/^\<package\>/ {
 
 # Obtém os atributos
 /private .*;/ {
-  attributes[++nattributes] = getAttribute($0)
+  $0 = removeComments($0)
+  attributes[++nattributes] = getAttribute()
 }
 
 # Imprime o método getNome()
@@ -162,27 +167,30 @@ NR==1,/^\<package\>/ {
 # Reescreve os métodos getters levando em consideração o dicionário.
 # O método getNome() é mantido inalterado.
 /public .* (is|get)/ {
+  $0 = removeComments($0)
   methods[++nmethods] = getMethod()
   if (! /\<getNome\>/) {
     IGNORECASE = 1
     attr = null
     for (i in attributes) {
-      if (match(methods[nmethods], attributes[i])) {
+      if (match($0, attributes[i]) && ((length($(NF -1)) - 5) <= RLENGTH)) {
+        print "lentgth($NF) " length($(NF - 1)) - 5
+        print "rlength " RLENGTH
         attr = attributes[i]
         break
       }
-
     }
     IGNORECASE = 0
     if (attr == null) {
         printf "Erro: Não encontrado atributo correspondente ao método %s.\n", methods[nmethods]
-        exit
     }
-    print "\npublic MessageSourceResolvable " methods[nmethods]"() {"
-    printf "\tString code = this.getClass().getName() + \".\" + this.name() + \".%s\";\n", 
-      attr
-    print "\treturn new NextMessageSourceResolvable(code);"
-    print "}"
+    else {
+      print "\npublic MessageSourceResolvable " methods[nmethods]"() {"
+      printf "\tString code = this.getClass().getName() + \".\" + this.name() + \".%s\";\n", 
+        attr
+      print "\treturn new NextMessageSourceResolvable(code);"
+      print "}"
+    }
   }
 }
 
