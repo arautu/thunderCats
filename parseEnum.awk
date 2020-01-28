@@ -174,8 +174,6 @@ NR==1,/^\<package\>/ {
     attr = null
     for (i in attributes) {
       if (match($0, attributes[i]) && ((length($(NF -1)) - 5) <= RLENGTH)) {
-        print "lentgth($NF) " length($(NF - 1)) - 5
-        print "rlength " RLENGTH
         attr = attributes[i]
         break
       }
