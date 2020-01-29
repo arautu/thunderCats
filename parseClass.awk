@@ -72,12 +72,9 @@ NR==1, /\s\<class\>\s/ && !/^\/.*/ {
   className = nameOfClass()
 }
 
-# Remove @DisplayName
+# Lê e remove @DisplayName
 /^(\t|)@DisplayName/ {
   associateDisplaName(aDisplayName)
-  for (i in aDisplayName) {
-    print "aDisplayName " aDisplayName[i]
-  }
 }
 
 # Imprime tudo
