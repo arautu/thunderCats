@@ -41,25 +41,16 @@ function getDisplayName(line) {
   return asplit[nsplit - 1]
 }
 
-function associateDisplaName(aDisplayName,  found) {
-  aDisplayName[2] = getDisplayName($0) 
-  found = 0
-  do {
-    getline
-    if (/\s\<class\>\s/ && !/^\/.*/) {
-      found = 1
-      aDisplayName[1] = nameOfClass() 
-    }
-    else if (/\s(is|get)[[:alpha:]]+/) {
-      found = 1
-      aDisplayName[1] = nameOfMethod()
-    }
-  } while (!found)
+function baseName(name) {
+  gsub("get", "", name)
+  gsub(/\(.*/, "", name)
+  return tolower(substr(name, 1, 1)) substr(name, 2)
 }
 
 # === Início do Programa ===
 BEGIN {
-
+  nClass = 0
+  nmethod = 0
 }
 
 # Obtém o nome do pacote.
@@ -68,19 +59,38 @@ NR==1,/^\<package\>/ {
 }
 
 # Obtém o nome da classe.
-NR==1, /\s\<class\>\s/ && !/^\/.*/ {
-  className = nameOfClass()
+/\s\<class\>\s/ && !/^\/.*/ {
+    if (nClass == 0) { 
+      className[1] = nameOfClass()
+      className[2] = displayName
+      displayName = ""
+      nClass++
+    }
 }
 
+# Obtém os métodos.
+/public .* (is|get)[[:alpha:]]/ &&
+!/^\/.*/ && 
+!/getDataAlteracaoAuditoria/ &&
+!/getUsuarioAuditoria/ {
+  methods[++nmethod][1] = nameOfMethod()
+  methods[nmethod][2] = displayName
+  displayName = ""
+}
 # Lê e remove @DisplayName
 /^(\t|)@DisplayName/ {
-  associateDisplaName(aDisplayName)
-}
+  displayName = getDisplayName($0)
+  next
+}1
 
 # Imprime tudo
-{}1
+#{}1
 
 END {
-  print package"."className"="
+  print package "." className[1] "=" className[2]
+  for (i in methods) {
+    rawName = baseName(methods[i][1])
+    print package "." className[1] "." rawName "=" methods[i][2]
+  }
 }
 
