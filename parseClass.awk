@@ -51,6 +51,9 @@ function baseName(name) {
 BEGIN {
   nClass = 0
   nmethod = 0
+  nline = 0
+  change = 0
+  braces = 0
 }
 
 # Obtém o nome do pacote.
@@ -81,10 +84,37 @@ NR==1,/^\<package\>/ {
 /^(\t|)@DisplayName/ {
   displayName = getDisplayName($0)
   next
-}1
+}
 
-# Imprime tudo
-#{}1
+/public .* equals/ {
+  do {
+    record[++nline] = $0
+    if (match($0, "{")) {
+      braces++
+    }
+    else if (match($0, "}")) {
+      braces--
+    }
+    if (match($0, "getId")) {
+      change = 1
+    }
+    getline
+  } while (braces != 0) 
+
+  if (change == 1) {
+    change = 0
+    print "\t@Override"
+    print "\tpublic boolean equals(Object outro) {"
+    print "\t\treturn SliicUtil.objects.equals(this, (Estado) outro, (e) -> e.getId());"
+    print "\t}"
+  } else {
+    for (i in record) {
+      print record[i++]
+    }
+  }
+  nline = 0
+  delete record
+}1
 
 END {
   print package "." className[1] "=" className[2]
