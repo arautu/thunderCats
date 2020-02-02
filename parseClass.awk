@@ -47,6 +47,43 @@ function baseName(name) {
   return tolower(substr(name, 1, 1)) substr(name, 2)
 }
 
+# Retorna 1 se encontrar a chave "}" que fecha o escopo do método.
+# Inputs:  line -> Linha de strings a ser testada.
+#          braces -> Contador estático de chaves.
+# Output: Retorna 1 ao encontrar a chave que fecha a função
+#          e 0 caso contrário.
+function closeBraceOfFunction(line,   out) {
+  if (match(line, "{")) {
+    braces++
+  }
+  else if (match(line, "}")) {
+    braces--
+  }
+  (braces == 0) ?  out = 1 : out = 0
+  return out
+}
+
+# Substitui o método equals(), dependendo do valor do parâmetro change.
+# parâmetros: change -> Determina se a função vai substituir o método equals ou
+# vai imprimir o que está no array record.
+#             record -> Array com o método equals(). Normalmente é o método 
+# existente.
+# Retorno: Sem retorno.
+function printEqualsMethod(change, record) {
+  if (change == 1) {
+    change = 0
+      print "\t@Override"
+      print "\tpublic boolean equals(Object outro) {"
+      print "\t\treturn SliicUtil.objects.equals(this, (Estado) outro, (e) -> e.getId());"
+      print "\t}"
+  } else {
+    for (i in record) {
+      print record[i++]
+    }
+  }
+  print "\n"
+}
+
 # === Início do Programa ===
 BEGIN {
   nClass = 0
@@ -54,14 +91,16 @@ BEGIN {
   nline = 0
   change = 0
   braces = 0
+  closeBrace = 0
 }
 
-# Obtém o nome do pacote.
+# Salva em package o nome do pacote.
 NR==1,/^\<package\>/ {
   package = nameOfPkg($2)
 }
 
-# Obtém o nome da classe.
+# Salva em clasName o nome da classe e seu respectivo valor de @DisplayName,
+# caso tenha.
 /\s\<class\>\s/ && !/^\/.*/ {
     if (nClass == 0) { 
       className[1] = nameOfClass()
@@ -71,7 +110,8 @@ NR==1,/^\<package\>/ {
     }
 }
 
-# Obtém os métodos.
+# Salva o nome do método no array methods e seu correpondente valor de 
+# @DisplayName, caso tenha.
 /public .* (is|get)[[:alpha:]]/ &&
 !/^\/.*/ && 
 !/getDataAlteracaoAuditoria/ &&
@@ -80,42 +120,29 @@ NR==1,/^\<package\>/ {
   methods[nmethod][2] = displayName
   displayName = ""
 }
-# Lê e remove @DisplayName
+# Obtém o parâmetro da tag @DisplayName e remove ela completamente.
 /^(\t|)@DisplayName/ {
   displayName = getDisplayName($0)
   next
 }
 
+# Substitui o método equals() se ele possui a instrução getId() em seu escopo.
 /public .* equals/ {
-  do {
+  while (!closeBrace) {
     record[++nline] = $0
-    if (match($0, "{")) {
-      braces++
-    }
-    else if (match($0, "}")) {
-      braces--
-    }
     if (match($0, "getId")) {
       change = 1
-    }
-    getline
-  } while (braces != 0) 
-
-  if (change == 1) {
-    change = 0
-    print "\t@Override"
-    print "\tpublic boolean equals(Object outro) {"
-    print "\t\treturn SliicUtil.objects.equals(this, (Estado) outro, (e) -> e.getId());"
-    print "\t}"
-  } else {
-    for (i in record) {
-      print record[i++]
-    }
+   }
+   closeBrace = closeBraceOfFunction($0)
+   getline
   }
+  printEqualsMethod(change, record)
   nline = 0
   delete record
+  closeBrace = 0
 }1
 
+# End
 END {
   print package "." className[1] "=" className[2]
   for (i in methods) {
