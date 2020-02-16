@@ -105,10 +105,11 @@ function obtemElementosEnum(frase, lista,  array, i) {
     else {
       lista[++i] = substr(frase, 1, token - 1)
     }
-    gsub(/(^\s+|\)$)+/,"",lista[i])    
+    gsub(/^\s+/,"",lista[i])    
     frase = substr(frase, token + 1)
     token = match(frase, /(,|;)/)
   }
+    gsub(/\)$/,"",lista[i])    
 }
 
 # Exclui as colunas de um array.
