@@ -14,13 +14,16 @@ BEGIN {
   nConstantes = 0
   nPilhaFunc = 0
   nPilhaOver = 0
+  inicioDoEscopo = 0
+  fimDoEscopo = 0
   encontradoToString = 0
   atributosEnum[++nAtributos][1] = "name"
   atributosEnum[nAtributos][2] = "String"
+  nomeDoEnum = "qualquer coisa"
 }
 
 # Obtém o nome da enumerção.
-/(public|private) \<enum\> / {
+/(public|private) \<enum\>/ {
   nomeDoEnum = obtemNomeDoEnum($0)
 }
 
@@ -42,40 +45,45 @@ BEGIN {
 # Corresponde com o nome do enum.
 # Obtém os parâmetros do construtor, mesmo se eles estiverem quebrados.
 # em diversas linhas.
-$0 ~ nomeDoEnum "\\s*\\(", /{/ {
-  nParams = obtemParametrosDaFuncao(parametros)
-  for (i = 1; i <= nParams; i++) {
-    atributosEnum[++nAtributos][1] = parametros[i][1]
-    atributosEnum[nAtributos][2] = parametros[i][2]
-  }
-}
-
-# Corresponde com o nome do enum.
 # Obtém o verdadeiro nome das colunas descritivas do enum.
 # Imprime o enum refatorado.
 # Imprime os atributos que ficaram no enum refatorado.
 # Imprime o construtor, caso tenha ficado atributos no enum refatorado.
-$0 ~ nomeDoEnum "\\s*\\(", /}/ {
-  if (match($0, "=")) {
-    substituiParametroPorAtributo(atributosEnum)
-  }
-  if (match($0, "}")) {
-    dividirListas(atributosEnum, listaDeExcluidos, colunasSelecionadas, 2)
-    copiarLista(atributosEnum, atributosSemName, 2)
-    delete atributosSemName[1]
-    if (tamanhoDaLista(atributosEnum) == 1) {
-      imprimeSomenteConstantes(tabelaEnum, nConstantes)
+$0 ~ nomeDoEnum, /}/ {
+  if (match($1, nomeDoEnum"\\(")) {
+    while (!inicioDoEscopo) {
+     nParams = obtemParametrosDaFuncao(parametros)
+     for (i = 1; i <= nParams; i++) {
+       atributosEnum[++nAtributos][1] = parametros[i][1]
+       atributosEnum[nAtributos][2] = parametros[i][2]
+     }
+      inicioDoEscopo = match($NF, "{")
+      getline
     }
-    else {
-      acrescentaAspas(tabelaEnum, atributosEnum)
-      imprimeEnum(tabelaEnum, atributosEnum, nConstantes, 
-        tamanhoDaLista(atributosEnum))
-      imprimeAtributos(atributosSemName)
-      imprimeConstrutor(atributosSemName)
+    while (!fimDoEscopo) {
+      if (match($0, "=")) {
+        substituiParametroPorAtributo(atributosEnum)
+      }
+      if (match($0, "}")) {
+        dividirListas(atributosEnum, listaDeExcluidos, colunasSelecionadas, 2)
+        copiarLista(atributosEnum, atributosSemName, 2)
+        delete atributosSemName[1]
+      if (tamanhoDaLista(atributosEnum) == 1) {
+        imprimeSomenteConstantes(tabelaEnum, nConstantes)
+      }
+      else {
+        acrescentaAspas(tabelaEnum, atributosEnum)
+        imprimeEnum(tabelaEnum, atributosEnum, nConstantes,
+          tamanhoDaLista(atributosEnum))
+        imprimeAtributos(atributosSemName)
+        imprimeConstrutor(atributosSemName)
+       }
+       delete atributosSemName
+      }
+      fimDoEscopo = match($NF, "}")
+      getline
     }
-    delete atributosSemName
   }
-  next
 }
 
 # Corresponde com os métodos getters e is ou marcador com a tag @Override.
