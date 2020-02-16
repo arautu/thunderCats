@@ -5,6 +5,7 @@ BEGIN {
   nConstantes = 0
   atributosEnum[++nAtributos][1] = "name"
   atributosEnum[nAtributos][2] = "String"
+  nomeDoEnum = "qualquer nome"
 }
 
 # Obtém o nome da enumerção.
